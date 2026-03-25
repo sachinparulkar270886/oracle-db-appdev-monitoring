@@ -19,9 +19,9 @@ List of upcoming and historic changes to the exporter.
 - Improve database `ping` handling so transient connection errors enter backoff and closed connections are rebuilt and warmed before reuse.
 - Fix alert log export when nullable database fields such as `execution_context_id` are returned as `NULL`.
 - Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
-- Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics. 
+- Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics.
 - Update third-party dependencies.
-- Update Go runtime to 1.25.7.
+- Update Go runtime to 1.26.1.
 
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
