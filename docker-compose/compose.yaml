@@ -10,6 +10,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus:/etc/prometheus
+      - ./prometheus/rules.yml:/etc/prometheus/rules.yml:ro
       - prom_data:/prometheus
 
   grafana:
@@ -25,7 +26,30 @@ services:
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+  tempo:
+    image: grafana/tempo:1.5.0
+    container_name: tempo
+    ports:
+      - 3200:3200  # Tempo query port
+      - 9095:9095  # gRPC
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/tmp/tempo/traces
+    depends_on:
+      - otel-collector
 
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - 3100:3100
+    command: ["-config.file=/etc/loki.yaml"]
+    volumes:
+      - ./loki.yaml:/etc/loki.yaml:ro
+      - loki_data:/loki
+    depends_on:
+      - otel-collector
   free23ai:
     image: gvenzl/oracle-free:23.26.1-slim-faststart
     container_name: free23ai
@@ -88,5 +112,26 @@ services:
       second23ai:
         condition: service_healthy
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    ports:
+      - 4317:4317    # OTLP gRPC
+      - 4318:4318    # OTLP HTTP
+      - 8889:8889    # Prometheus exporter from collector (host port changed to avoid conflict)
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    command:
+      - "--config=/etc/otel-collector-config.yaml"
+    depends_on:
+      free23ai:
+        condition: service_healthy
+      second23ai:
+        condition: service_healthy
+      exporter:
+        condition: service_started
+
 volumes:
   prom_data:
+  loki_data:
+  tempo_data:

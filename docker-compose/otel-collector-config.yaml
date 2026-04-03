@@ -1,0 +1,95 @@
+receivers:
+  sqlquery/oracle:
+    driver: "oracle"
+    host: "free23ai"
+    port: 1521
+    database: "freepdb1"
+    username: "pdbadmin"
+    password: "Welcome12345"
+    collection_interval: 15s
+    queries:
+      - sql: |
+          SELECT COUNT(*) AS oracle_sessions
+          FROM v$session
+          WHERE status='ACTIVE'
+        metrics:
+          - metric_name: oracle_sessions
+            value_column: ORACLE_SESSIONS
+            value_type: int
+            data_type: gauge
+            description: "Active Oracle sessions"
+            static_attributes:
+              db.system: oracle
+              db.name: freepdb1
+              service.name: oracle-sql-receiver
+
+  sqlquery/oracle2:
+    driver: "oracle"
+    host: "second23ai"
+    port: 1521
+    database: "freepdb1"
+    username: "pdbadmin"
+    password: "Welcome12345"
+    collection_interval: 15s
+    queries:
+      - sql: |
+          SELECT COUNT(*) AS oracle_sessions
+          FROM v$session
+          WHERE status='ACTIVE'
+        metrics:
+          - metric_name: oracle_sessions
+            value_column: ORACLE_SESSIONS
+            value_type: int
+            data_type: gauge
+            description: "Active Oracle sessions"
+            static_attributes:
+              db.system: oracle
+              db.name: secondpdb1
+              service.name: oracle-sql-receiver
+
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+  resource:
+    attributes:
+      - action: upsert
+        key: service.name
+        value: oracle-sql-collector
+      - action: upsert
+        key: telemetry.sdk.language
+        value: go
+
+exporters:
+  otlp:
+    endpoint: "localhost:4317"
+    tls:
+      insecure: true
+
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: oracle_sql
+
+  otlp/tempo:
+    endpoint: "tempo:4317"
+    tls:
+      insecure: true
+
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    metrics:
+      receivers: [sqlquery/oracle, sqlquery/oracle2]
+      processors: [batch, resource]
+      exporters: [prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp/tempo]
